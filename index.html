@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FREUDE — A Scroll Through Time | BMW</title>
+  <meta name="description" content="Experience 60 years of BMW driving philosophy on one continuous road. Scroll through time — from 1961 to the electric future.">
+  <meta name="theme-color" content="#0A0A0A">
+  <meta property="og:title" content="FREUDE — A Scroll Through Time">
+  <meta property="og:description" content="60 years of BMW on one road. Scroll through time.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="images/opt/act1.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="images/opt/act1.jpg">
+
+  <link rel="preload" href="frames/act1_full/f0001.jpg" as="image" fetchpriority="high">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <style>
+    :root {
+      --carbon: #0A0A0A;
+      --graphite: #1A1A1A;
+      --signal-white: #F5F5F5;
+      --bmw-blue: #1C69D4;
+      --iconic-glow: #E8F0FF;
+      --taillight-red: #C8102E;
+      --golden-hour: #D4956A;
+      --font-display: 'Helvetica Neue', 'Arial', system-ui, -apple-system, sans-serif;
+      --font-mono: 'SF Mono', 'Monaco', 'Courier New', monospace;
+      --ease-quiet: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      background: var(--carbon); color: var(--signal-white);
+      font-family: var(--font-display); overflow-x: hidden;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    }
+    body::-webkit-scrollbar { width: 0; }
+    body { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* CUSTOM CURSOR */
+    @media (hover: hover) and (pointer: fine) {
+      * { cursor: none !important; }
+      #custom-cursor {
+        position: fixed; top: 0; left: 0; width: 10px; height: 10px;
+        border-radius: 50%; background: var(--signal-white);
+        mix-blend-mode: difference; z-index: 10000; pointer-events: none;
+        transform: translate(-50%, -50%); will-change: transform;
+        transition: width 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+      }
+      #custom-cursor.hovering { width: 40px; height: 40px; opacity: 0.5; }
+      #custom-cursor.scrolling { width: 5px; height: 5px; }
+    }
+
+    /* LOADER */
+    #loader {
+      position: fixed; inset: 0; background: var(--carbon); z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s var(--ease-quiet), visibility 0.8s var(--ease-quiet);
+    }
+    #loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loader-ring-wrap { position: relative; width: 72px; height: 72px; margin-bottom: 32px; }
+    .loader-ring-bg { position: absolute; inset: 0; width: 72px; height: 72px; transform: rotate(-90deg); }
+    .loader-ring-bg circle { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 1.5; }
+    .loader-ring-progress { position: absolute; inset: 0; width: 72px; height: 72px; transform: rotate(-90deg); }
+    .loader-ring-progress circle {
+      fill: none; stroke: var(--signal-white); stroke-width: 1.5;
+      stroke-dasharray: 209; stroke-dashoffset: 209;
+      transition: stroke-dashoffset 0.2s ease; stroke-linecap: round;
+    }
+    .loader-text { font-size: clamp(12px, 1.6vw, 16px); letter-spacing: 0.4em; text-transform: uppercase; color: var(--signal-white); margin-bottom: 8px; font-weight: 300; opacity: 0.7; }
+    .loader-percent { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; }
+
+    /* CANVAS */
+    #frame-canvas {
+      position: fixed; inset: 0; width: 100vw; height: 100vh;
+      z-index: 1; background: var(--carbon); will-change: transform;
+    }
+
+    /* TEXT CONTRAST SCRIM — Strong gradient behind text for readability */
+    #text-scrim {
+      position: fixed; inset: 0; z-index: 3; pointer-events: none;
+      background: linear-gradient(to bottom,
+        rgba(10,10,10,0.55) 0%,
+        rgba(10,10,10,0.2) 20%,
+        rgba(10,10,10,0.2) 80%,
+        rgba(10,10,10,0.55) 100%
+      );
+      opacity: 0; transition: opacity 0.8s var(--ease-quiet);
+    }
+    #text-scrim.visible { opacity: 1; }
+
+    /* CINEMATIC VIGNETTE */
+    #cinematic-overlay {
+      position: fixed; inset: 0; z-index: 4; pointer-events: none;
+      background: radial-gradient(ellipse 120% 100% at center, transparent 30%, rgba(0,0,0,0.5) 100%);
+    }
+
+    /* ACT FLASH */
+    #act-flash {
+      position: fixed; inset: 0; z-index: 6; pointer-events: none;
+      background: var(--carbon); opacity: 0; transition: opacity 0.4s ease;
+    }
+
+    /* HERO */
+    #hero {
+      position: relative; height: 100vh; width: 100%; z-index: 10;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      text-align: center;
+    }
+    .hero-title {
+      font-size: clamp(38px, 10vw, 110px); font-weight: 200; letter-spacing: 0.05em;
+      line-height: 1.1; color: var(--signal-white); text-transform: uppercase; margin-bottom: 18px;
+      text-shadow: 0 2px 30px rgba(0,0,0,0.8); opacity: 0; will-change: transform, opacity;
+    }
+    .hero-subtitle {
+      font-size: clamp(10px, 1.4vw, 14px); font-weight: 300; letter-spacing: 0.3em;
+      text-transform: uppercase; color: rgba(255,255,255,0.6); opacity: 0;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.8); will-change: transform, opacity;
+    }
+    .scroll-hint {
+      position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.3em;
+      text-transform: uppercase; color: rgba(255,255,255,0.5); opacity: 0; will-change: opacity;
+      text-shadow: 0 2px 15px rgba(0,0,0,0.8);
+    }
+    .scroll-hint::after { content: ''; display: block; width: 1px; height: 28px; background: linear-gradient(to bottom, rgba(255,255,255,0.5), transparent); margin: 10px auto 0; animation: scrollLine 2s ease-in-out infinite; }
+    @keyframes scrollLine { 0%,100% { opacity: 0.3; transform: scaleY(0.5); transform-origin: top; } 50% { opacity: 1; transform: scaleY(1); transform-origin: top; } }
+
+    /* ACT SECTIONS — taller for more scroll room = smoother frame playback */
+    .act-section { position: relative; width: 100%; height: 250vh; z-index: 2; }
+
+    /* TEXT OVERLAYS — No box. Just text with strong shadow + subtle gradient behind text area only */
+    .act-text {
+      position: fixed; inset: 0; z-index: 7; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center; pointer-events: none;
+      padding: 20px;
+    }
+    .act-year, .act-title, .act-quote { opacity: 0; will-change: transform, opacity; }
+    .act-year {
+      font-family: var(--font-mono); font-size: clamp(10px, 1.2vw, 13px);
+      letter-spacing: 0.4em; text-transform: uppercase; margin-bottom: 20px;
+      text-shadow: 0 2px 20px #000, 0 0 30px rgba(0,0,0,0.9);
+    }
+    .act-title {
+      font-size: clamp(32px, 7vw, 80px); font-weight: 200; letter-spacing: 0.02em;
+      line-height: 1.15; color: var(--signal-white); text-transform: uppercase;
+      margin-bottom: 24px; max-width: 900px;
+      text-shadow: 0 4px 25px #000, 0 0 50px rgba(0,0,0,0.95);
+    }
+    .act-quote {
+      font-size: clamp(14px, 2vw, 22px); font-weight: 300; letter-spacing: 0.05em;
+      color: #FFFFFF; font-style: italic; max-width: 600px; line-height: 1.6;
+      text-shadow: 0 2px 20px #000, 0 0 30px rgba(0,0,0,0.9);
+    }
+    .act-text[data-act="1"] .act-year { color: var(--golden-hour); }
+    .act-text[data-act="2"] .act-year { color: var(--taillight-red); }
+    .act-text[data-act="3"] .act-year { color: var(--iconic-glow); }
+
+    /* PROGRESS BAR */
+    #progress { position: fixed; bottom: 0; left: 0; width: 100%; height: 3px; z-index: 100; background: rgba(255,255,255,0.04); }
+    #progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--golden-hour), var(--taillight-red), var(--iconic-glow));
+      background-size: 300% 100%; background-position: 0% 0%;
+      transition: width 0.1s linear, background-position 0.5s ease;
+      box-shadow: 0 0 10px rgba(255,255,255,0.2);
+    }
+
+    /* NAV DOTS */
+    #nav-dots {
+      position: fixed; right: 24px; top: 50%; transform: translateY(-50%); z-index: 100;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+    .nav-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: transparent;
+      border: 1px solid rgba(255,255,255,0.2); transition: all 0.5s var(--ease-quiet);
+      cursor: pointer; padding: 0; position: relative;
+    }
+    .nav-dot::before {
+      content: attr(data-label); position: absolute; right: 20px; top: 50%;
+      transform: translateY(-50%); white-space: nowrap;
+      font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: rgba(255,255,255,0.6);
+      opacity: 0; transition: opacity 0.4s ease; pointer-events: none;
+      text-shadow: 0 1px 10px rgba(0,0,0,0.8);
+    }
+    .nav-dot:hover::before, .nav-dot.active::before { opacity: 1; }
+    .nav-dot.active { background: var(--signal-white); border-color: var(--signal-white); transform: scale(1.3); }
+    .nav-dot:hover { border-color: var(--signal-white); transform: scale(1.3); }
+    .nav-dot:focus-visible { outline: 2px solid var(--bmw-blue); outline-offset: 4px; }
+
+    /* SOUND TOGGLE */
+    #sound-toggle {
+      position: fixed; top: 24px; right: 24px; z-index: 100;
+      background: rgba(10,10,10,0.5); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 50%;
+      width: 42px; height: 42px; color: rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.4s var(--ease-quiet); cursor: pointer;
+    }
+    #sound-toggle:hover { border-color: var(--signal-white); color: var(--signal-white); }
+    #sound-toggle.active { color: var(--signal-white); border-color: rgba(255,255,255,0.4); }
+
+    /* ACT INDICATOR */
+    #act-indicator {
+      position: fixed; top: 24px; left: 24px; z-index: 100;
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: rgba(255,255,255,0.4); opacity: 0;
+      transition: opacity 0.5s ease; text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px); background: rgba(10,10,10,0.3); padding: 8px 14px; border-radius: 2px;
+    }
+    #act-indicator.visible { opacity: 1; }
+
+    /* OUTRO */
+    .outro {
+      position: relative; z-index: 10; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 60px 20px; background: var(--carbon);
+    }
+    .outro-title { font-size: clamp(34px, 8vw, 90px); font-weight: 200; letter-spacing: 0.05em; color: var(--signal-white); text-transform: uppercase; margin-bottom: 18px; opacity: 0; will-change: transform, opacity; }
+    .outro-subtitle { font-size: clamp(10px, 1.4vw, 14px); font-weight: 300; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 50px; opacity: 0; will-change: transform, opacity; }
+    .outro-replay {
+      background: none; border: 1px solid rgba(255,255,255,0.25); color: var(--signal-white);
+      padding: 16px 40px; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+      font-family: var(--font-display); cursor: pointer; margin-bottom: 60px;
+      transition: all 0.4s var(--ease-quiet); opacity: 0; will-change: transform, opacity;
+    }
+    .outro-replay:hover { border-color: var(--signal-white); letter-spacing: 0.4em; background: rgba(255,255,255,0.05); }
+    .outro-credits { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.25); line-height: 2; }
+
+    @media (max-width: 768px) {
+      #nav-dots { right: 10px; gap: 16px; }
+      .nav-dot::before { display: none; }
+      #sound-toggle { top: 16px; right: 16px; width: 38px; height: 38px; }
+      #act-indicator { top: 16px; left: 16px; font-size: 8px; padding: 6px 10px; }
+      .act-section { height: 200vh; }
+      .hero-title { font-size: clamp(32px, 12vw, 60px); }
+      .act-title { font-size: clamp(26px, 8vw, 52px); }
+      .act-quote { font-size: clamp(12px, 3vw, 16px); }
+      #custom-cursor { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="custom-cursor"></div>
+  <div id="text-scrim"></div>
+  <div id="cinematic-overlay"></div>
+  <div id="act-flash"></div>
+
+  <div id="loader" role="status" aria-live="polite">
+    <div class="loader-ring-wrap">
+      <svg class="loader-ring-bg" viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" /></svg>
+      <svg class="loader-ring-progress" viewBox="0 0 72 72"><circle id="loader-ring-circle" cx="36" cy="36" r="33" /></svg>
+    </div>
+    <div class="loader-text">Freude am Fahren</div>
+    <div class="loader-percent" id="loader-percent">0%</div>
+  </div>
+
+  <canvas id="frame-canvas" aria-label="BMW journey through time"></canvas>
+
+  <section id="hero" aria-label="Introduction">
+    <h1 class="hero-title">Freude<br>am Fahren</h1>
+    <p class="hero-subtitle">A Scroll Through Time</p>
+    <div class="scroll-hint">Scroll to begin</div>
+  </section>
+
+  <section class="act-section" data-act="1" aria-label="Act I — The Awakening, 1961"></section>
+  <section class="act-section" data-act="2" aria-label="Act II — The Icon, 1970s"></section>
+  <section class="act-section" data-act="3" aria-label="Act III — The Silence, 2025+"></section>
+
+  <div class="act-text" data-act="1" id="text-1">
+    <div class="act-year">1961 — The Neue Klasse</div>
+    <h2 class="act-title">The Awakening</h2>
+    <p class="act-quote">"A car shouldn't just transport you.<br>It should thrill you."</p>
+  </div>
+  <div class="act-text" data-act="2" id="text-2">
+    <div class="act-year">1970s — The Ultimate Driving Machine</div>
+    <h2 class="act-title">The Icon</h2>
+    <p class="act-quote">"The philosophy claims the night.<br>Sheer driving pleasure, global."</p>
+  </div>
+  <div class="act-text" data-act="3" id="text-3">
+    <div class="act-year">2025+ — Neue Klasse</div>
+    <h2 class="act-title">The Silence</h2>
+    <p class="act-quote">"Joy in the electric age.<br>The soul, reborn in silence."</p>
+  </div>
+
+  <div id="act-indicator" aria-hidden="true"></div>
+  <div id="progress" aria-hidden="true"><div id="progress-bar"></div></div>
+
+  <button id="sound-toggle" aria-label="Toggle ambient sound" aria-pressed="false">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" id="sound-icon-off">
+      <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M23 9l-6 6M17 9l6 6"/>
+    </svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" id="sound-icon-on" style="display:none">
+      <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+    </svg>
+  </button>
+
+  <nav id="nav-dots" aria-label="Section navigation">
+    <button class="nav-dot active" data-section="0" data-label="Overture" aria-label="Hero"></button>
+    <button class="nav-dot" data-section="1" data-label="I — Awakening" aria-label="Act I"></button>
+    <button class="nav-dot" data-section="2" data-label="II — The Icon" aria-label="Act II"></button>
+    <button class="nav-dot" data-section="3" data-label="III — Silence" aria-label="Act III"></button>
+    <button class="nav-dot" data-section="4" data-label="Coda" aria-label="Outro"></button>
+  </nav>
+
+  <section class="outro" id="outro" aria-label="Conclusion">
+    <h2 class="outro-title">Sheer<br>Driving Pleasure</h2>
+    <p class="outro-subtitle">Est. 1916 — Freude am Fahren</p>
+    <button class="outro-replay" id="replay-btn">Replay Experience</button>
+    <div class="outro-credits">
+      A BMW Scrollytelling Experience<br>
+      Scroll-Driven Cinema · One Road · Sixty Years<br><br>
+      GSAP ScrollTrigger · Canvas Frame Engine · Web Audio
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+
+  <script>
+    gsap.registerPlugin(ScrollTrigger);
+
+    // CONFIG — 192 frames per act (every frame at 24fps)
+    const ACTS = [
+      { dir: 'frames/act1_full', count: 192, text: 'text-1', label: 'I — THE AWAKENING' },
+      { dir: 'frames/act2_full', count: 192, text: 'text-2', label: 'II — THE ICON' },
+      { dir: 'frames/act3_full', count: 192, text: 'text-3', label: 'III — THE SILENCE' }
+    ];
+    const TOTAL_FRAMES = 576;
+    const IS_MOBILE = window.innerWidth < 768;
+
+    // STATE
+    const canvas = document.getElementById('frame-canvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    let frames = [[], [], []];
+    let loadedCount = 0;
+    let lenis = null;
+    let currentAct = -1;
+    let scrollStarted = false;
+    let soundEnabled = false;
+    let audioCtx = null, ambientGain = null, engineOsc = null;
+    let targetFrameFloat = 0;
+    let currentFrameFloat = 0;
+    let renderLoopRunning = false;
+    let isScrolling = false;
+    let scrollIdleTimer = null;
+
+    const loaderEl = document.getElementById('loader');
+    const loaderPercent = document.getElementById('loader-percent');
+    const loaderRing = document.getElementById('loader-ring-circle');
+    const progressBar = document.getElementById('progress-bar');
+    const actIndicator = document.getElementById('act-indicator');
+    const actFlash = document.getElementById('act-flash');
+    const textScrim = document.getElementById('text-scrim');
+    const navDots = document.querySelectorAll('.nav-dot');
+    const textOverlays = [
+      document.getElementById('text-1'),
+      document.getElementById('text-2'),
+      document.getElementById('text-3')
+    ];
+    const cursor = document.getElementById('custom-cursor');
+
+    // CANVAS SETUP
+    function setupCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, IS_MOBILE ? 1 : 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+    setupCanvas();
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { setupCanvas(); drawInterpolated(); }, 150);
+    });
+
+    // INTERPOLATED FRAME DRAWING — sub-frame crossfade for buttery smoothness
+    function drawInterpolated() {
+      if (currentAct < 0) return;
+      const actIdx = Math.min(currentAct, 2);
+      const frameIdx = Math.floor(currentFrameFloat);
+      const blend = currentFrameFloat - frameIdx;
+      const imgA = frames[actIdx]?.[frameIdx];
+      const imgB = frames[actIdx]?.[Math.min(frameIdx + 1, ACTS[actIdx].count - 1)];
+      if (!imgA) return;
+
+      const cw = window.innerWidth;
+      const ch = window.innerHeight;
+      const scale = Math.max(cw / imgA.width, ch / imgA.height);
+      const w = imgA.width * scale;
+      const h = imgA.height * scale;
+      const x = (cw - w) / 2;
+      const y = (ch - h) / 2;
+
+      ctx.fillStyle = '#0A0A0A';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(imgA, x, y, w, h);
+
+      // Crossfade to next frame for smooth interpolation
+      if (blend > 0.005 && imgB && imgB !== imgA) {
+        ctx.globalAlpha = blend;
+        ctx.drawImage(imgB, x, y, w, h);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // rAF RENDER LOOP — eased toward target, decoupled from scroll events
+    function renderLoop() {
+      if (!renderLoopRunning) return;
+      const diff = targetFrameFloat - currentFrameFloat;
+      if (Math.abs(diff) > 0.002) {
+        // Higher smoothing factor for more responsive but still smooth feel
+        currentFrameFloat += diff * 0.22;
+        drawInterpolated();
+      }
+      requestAnimationFrame(renderLoop);
+    }
+
+    // CUSTOM CURSOR
+    let mx = 0, my = 0, cx = 0, cy = 0;
+    document.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
+    function cursorRaf() {
+      cx += (mx - cx) * 0.2;
+      cy += (my - cy) * 0.2;
+      cursor.style.transform = `translate(${cx}px, ${cy}px) translate(-50%, -50%)`;
+      requestAnimationFrame(cursorRaf);
+    }
+    requestAnimationFrame(cursorRaf);
+    document.querySelectorAll('button, a, .nav-dot').forEach(el => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
+    });
+
+    // PRELOAD — Act 1 priority, then 2&3 in background
+    function preloadFrames() {
+      let act1Loaded = 0;
+      const act1Total = ACTS[0].count;
+
+      for (let fi = 0; fi < ACTS[0].count; fi++) {
+        const num = String(fi + 1).padStart(4, '0');
+        const img = new Image();
+        img.onload = () => {
+          frames[0][fi] = img;
+          loadedCount++;
+          act1Loaded++;
+          updateLoader(loadedCount, TOTAL_FRAMES);
+          if (fi === 0 && !scrollStarted) {
+            currentAct = 0; currentFrameFloat = 0;
+            drawInterpolated();
+          }
+          if (act1Loaded === act1Total && !scrollStarted) {
+            startExperience();
+          }
+        };
+        img.onerror = () => { loadedCount++; act1Loaded++; updateLoader(loadedCount, TOTAL_FRAMES); };
+        img.src = `${ACTS[0].dir}/f${num}.jpg`;
+      }
+
+      const loadRest = () => {
+        for (let ai = 1; ai < 3; ai++) {
+          for (let fi = 0; fi < ACTS[ai].count; fi++) {
+            const num = String(fi + 1).padStart(4, '0');
+            const img = new Image();
+            img.onload = () => { frames[ai][fi] = img; loadedCount++; updateLoader(loadedCount, TOTAL_FRAMES); };
+            img.onerror = () => { loadedCount++; updateLoader(loadedCount, TOTAL_FRAMES); };
+            img.src = `${ACTS[ai].dir}/f${num}.jpg`;
+          }
+        }
+      };
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(loadRest, { timeout: 3000 });
+      } else {
+        setTimeout(loadRest, 500);
+      }
+    }
+
+    function updateLoader(loaded, total) {
+      const pct = loaded / total;
+      if (loaderRing) loaderRing.style.strokeDashoffset = 209 * (1 - pct);
+      if (loaded < ACTS[0].count) {
+        loaderPercent.textContent = `${Math.round((loaded / ACTS[0].count) * 100)}%`;
+      } else if (loaded < total) {
+        loaderPercent.textContent = `${Math.round(pct * 100)}%`;
+      } else {
+        loaderPercent.textContent = 'Ready';
+      }
+    }
+
+    // START EXPERIENCE
+    function startExperience() {
+      scrollStarted = true;
+      gsap.timeline()
+        .to('#loader', { opacity: 0, duration: 0.8, ease: 'power2.inOut', onComplete: () => loaderEl.style.display = 'none' })
+        .fromTo('.hero-title', { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 1.2, ease: 'power3.out' })
+        .fromTo('.hero-subtitle', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }, '-=0.5')
+        .fromTo('.scroll-hint', { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.3')
+        .call(() => { initScrollEngine(); });
+    }
+
+    // SCROLL ENGINE
+    function initScrollEngine() {
+      // TUNED Lenis — slightly longer duration for smoother momentum
+      lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        smoothTouch: false,
+        touchMultiplier: 1.8,
+        wheelMultiplier: 1.0
+      });
+
+      function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+      requestAnimationFrame(raf);
+      lenis.on('scroll', ScrollTrigger.update);
+
+      // Start render loop
+      if (!renderLoopRunning) {
+        renderLoopRunning = true;
+        requestAnimationFrame(renderLoop);
+      }
+
+      // Frame mapping per act — maps scroll progress to frame float (0 to count-1)
+      document.querySelectorAll('.act-section').forEach((section, i) => {
+        ScrollTrigger.create({
+          trigger: section,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.3,
+          onUpdate: (self) => {
+            const progress = self.progress;
+            // Smooth ease-in-out curve for more natural motion at start/end of act
+            const easedProgress = progress < 0.5
+              ? 2 * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            const frameFloat = easedProgress * (ACTS[i].count - 1);
+            targetFrameFloat = frameFloat;
+
+            if (i !== currentAct) {
+              currentAct = i;
+              currentFrameFloat = frameFloat;
+              drawInterpolated();
+              // Act transition flash
+              actFlash.style.opacity = '0.2';
+              setTimeout(() => { actFlash.style.opacity = '0'; }, 400);
+              updateAudio(i);
+              if (IS_MOBILE && 'vibrate' in navigator) navigator.vibrate(30);
+            }
+          }
+        });
+
+        // Text overlay with staggered GSAP animation + show scrim
+        const overlay = textOverlays[i];
+        const year = overlay.querySelector('.act-year');
+        const title = overlay.querySelector('.act-title');
+        const quote = overlay.querySelector('.act-quote');
+
+        const tl = gsap.timeline({ paused: true })
+          .fromTo(year, { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' })
+          .fromTo(title, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: 'power3.out' }, '-=0.3')
+          .fromTo(quote, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' }, '-=0.4');
+
+        ScrollTrigger.create({
+          trigger: section,
+          start: '30% center',
+          end: '70% center',
+          onEnter: () => { tl.play(); textScrim.classList.add('visible'); },
+          onLeave: () => { tl.reverse(); },
+          onEnterBack: () => { tl.play(); textScrim.classList.add('visible'); },
+          onLeaveBack: () => { tl.reverse(); textScrim.classList.remove('visible'); }
+        });
+      });
+
+      // Progress bar + nav + act indicator
+      lenis.on('scroll', (e) => {
+        const total = document.body.scrollHeight - window.innerHeight;
+        const progress = total > 0 ? e.scroll / total : 0;
+        progressBar.style.width = (progress * 100) + '%';
+        updateNavDots(progress);
+        updateActIndicator(progress);
+        updateProgressGradient(progress);
+
+        // Cursor scroll state
+        isScrolling = true;
+        cursor.classList.add('scrolling');
+        clearTimeout(scrollIdleTimer);
+        scrollIdleTimer = setTimeout(() => {
+          cursor.classList.remove('scrolling');
+          isScrolling = false;
+        }, 200);
+      });
+
+      // Nav dot clicks — smooth scroll to targets
+      navDots.forEach((dot, i) => {
+        dot.addEventListener('click', () => {
+          const targets = [0, 0.15, 0.40, 0.65, 0.92];
+          const target = targets[i] * (document.body.scrollHeight - window.innerHeight);
+          lenis.scrollTo(target, { duration: 2.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+        });
+      });
+
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const current = getCurrentSection();
+          const next = Math.min(current + 1, 4);
+          navDots[next].click();
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const current = getCurrentSection();
+          const prev = Math.max(current - 1, 0);
+          navDots[prev].click();
+        }
+      });
+
+      // Outro animation
+      gsap.fromTo('.outro-title', { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: '#outro', start: 'top 80%' } });
+      gsap.fromTo('.outro-subtitle', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, delay: 0.3, scrollTrigger: { trigger: '#outro', start: 'top 80%' } });
+      gsap.fromTo('.outro-replay', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, delay: 0.5, scrollTrigger: { trigger: '#outro', start: 'top 80%' } });
+
+      // Replay button
+      document.getElementById('replay-btn').addEventListener('click', () => {
+        lenis.scrollTo(0, { duration: 3 });
+      });
+
+      ScrollTrigger.refresh();
+    }
+
+    function getCurrentSection() {
+      if (!lenis) return 0;
+      const progress = lenis.scroll / (document.body.scrollHeight - window.innerHeight);
+      if (progress < 0.08) return 0;
+      if (progress < 0.35) return 1;
+      if (progress < 0.60) return 2;
+      if (progress < 0.85) return 3;
+      return 4;
+    }
+
+    function updateNavDots(progress) {
+      let active = 0;
+      if (progress < 0.08) active = 0;
+      else if (progress < 0.35) active = 1;
+      else if (progress < 0.60) active = 2;
+      else if (progress < 0.85) active = 3;
+      else active = 4;
+      navDots.forEach((d, i) => d.classList.toggle('active', i === active));
+    }
+
+    function updateActIndicator(progress) {
+      if (progress < 0.08 || progress > 0.90) {
+        actIndicator.classList.remove('visible');
+      } else {
+        actIndicator.classList.add('visible');
+        let act = 0;
+        if (progress < 0.35) act = 0;
+        else if (progress < 0.60) act = 1;
+        else act = 2;
+        actIndicator.textContent = ACTS[act].label;
+      }
+    }
+
+    function updateProgressGradient(progress) {
+      if (progress < 0.35) progressBar.style.backgroundPosition = '0% 0%';
+      else if (progress < 0.60) progressBar.style.backgroundPosition = '50% 0%';
+      else progressBar.style.backgroundPosition = '100% 0%';
+    }
+
+    // WEB AUDIO
+    function initAudio() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      ambientGain = audioCtx.createGain();
+      ambientGain.gain.value = 0;
+      ambientGain.connect(audioCtx.destination);
+
+      const osc1 = audioCtx.createOscillator();
+      osc1.type = 'sine'; osc1.frequency.value = 55;
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'sine'; osc2.frequency.value = 110.5;
+      const oscGain = audioCtx.createGain(); oscGain.gain.value = 0.08;
+      osc1.connect(oscGain); osc2.connect(oscGain); oscGain.connect(ambientGain);
+      osc1.start(); osc2.start();
+
+      engineOsc = audioCtx.createOscillator();
+      engineOsc.type = 'sawtooth';
+      const engineFilter = audioCtx.createBiquadFilter();
+      engineFilter.type = 'lowpass'; engineFilter.frequency.value = 200;
+      const engineGain = audioCtx.createGain(); engineGain.gain.value = 0.03;
+      engineOsc.connect(engineFilter); engineFilter.connect(engineGain); engineGain.connect(ambientGain);
+      engineOsc.frequency.value = 65;
+      engineOsc.start();
+    }
+
+    function updateAudio(act) {
+      if (!audioCtx || !soundEnabled) return;
+      const freqs = [65, 80, 120];
+      if (engineOsc) engineOsc.frequency.linearRampToValueAtTime(freqs[act] || 65, audioCtx.currentTime + 0.8);
+    }
+
+    document.getElementById('sound-toggle').addEventListener('click', function() {
+      if (!audioCtx) initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      soundEnabled = !soundEnabled;
+      this.setAttribute('aria-pressed', soundEnabled);
+      this.classList.toggle('active', soundEnabled);
+      document.getElementById('sound-icon-off').style.display = soundEnabled ? 'none' : 'block';
+      document.getElementById('sound-icon-on').style.display = soundEnabled ? 'block' : 'none';
+      if (ambientGain) ambientGain.gain.linearRampToValueAtTime(soundEnabled ? 0.4 : 0, audioCtx.currentTime + 0.5);
+    });
+
+    // VISIBILITY
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        renderLoopRunning = false;
+      } else if (scrollStarted) {
+        renderLoopRunning = true;
+        requestAnimationFrame(renderLoop);
+        drawInterpolated();
+      }
+    });
+
+    // START
+    preloadFrames();
+
+    // Fallback
+    setTimeout(() => {
+      if (!scrollStarted && frames[0][0]) startExperience();
+    }, 12000);
+  </script>
+</body>
+</html>
